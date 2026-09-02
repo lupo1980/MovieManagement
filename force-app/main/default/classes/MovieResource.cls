@@ -1,6 +1,11 @@
 @restResource(urlMapping='/movies/*')
 global with sharing class MovieResource {
 
+    //TODO move to custom settings or custom metadata for easier configuration
+    global static final Integer PAGE_SIZE = 1000;
+    /**
+     * DTO classes to represent the paginated response 
+     */
     global class MoviePage {
         public Integer totalItems;
         public Integer page; //current page
@@ -30,6 +35,10 @@ global with sharing class MovieResource {
         }
     }
 
+    /**
+     * Retrieves a page of movies based on the requested page number
+     * @return MoviePage containing the paginated movie data
+     */
     @HttpGet
     global static MoviePage getByPage() {
         RestResponse res = RestContext.response;
@@ -45,9 +54,9 @@ global with sharing class MovieResource {
                 return null;
             }
 
-            Integer pageSize = 1000;
+            Integer pageSize = PAGE_SIZE;
             Integer offset = (pageNumber - 1) * pageSize;
-            //TODO cursor based pagination
+            //TODO cursor based pagination to avoid OFFSET performance issues for large datasets
             List<Movie__c> movies = [SELECT Id, Name, Genre__c, IMDB_Rating__c FROM Movie__c 
             Order By CreatedDate DESC, ID DESC LIMIT :pageSize OFFSET :offset ];
 

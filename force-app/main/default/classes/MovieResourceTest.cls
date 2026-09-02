@@ -36,8 +36,29 @@ private class MovieResourceTest {
         System.assertNotEquals(null, result);
         System.assertEquals(2500, result.totalItems);
         System.assertEquals(1, result.page);
-        System.assertEquals(1000, result.perPage);
-        System.assertEquals(1000, result.data.size());
+        System.assertEquals(MovieResource.PAGE_SIZE, result.perPage);
+        System.assertEquals(MovieResource.PAGE_SIZE, result.data.size());
+        System.assertNotEquals(null, result.data[0].Name);
+    }
+
+    @isTest
+    static void testGetByPageReturnsMoviesPage2() {
+        RestRequest request = new RestRequest();
+        request.requestURI = '/services/apexrest/movies';
+        request.httpMethod = 'GET';
+        request.params.put('pageNumber', '2');
+        RestContext.request = request;
+        RestContext.response = new RestResponse();
+
+        Test.startTest();
+        MovieResource.MoviePage result = MovieResource.getByPage();
+        Test.stopTest();
+
+        System.assertNotEquals(null, result);
+        System.assertEquals(2500, result.totalItems);
+        System.assertEquals(2, result.page);
+        System.assertEquals(MovieResource.PAGE_SIZE, result.perPage);
+        System.assertEquals(MovieResource.PAGE_SIZE, result.data.size());
         System.assertNotEquals(null, result.data[0].Name);
     }
 
