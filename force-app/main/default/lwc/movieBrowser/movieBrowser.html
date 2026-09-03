@@ -1,0 +1,15 @@
+<template>
+  <lightning-card title="Movies" icon-name="standard:movie">
+    <div class="slds-p-horizontal_medium">
+      <template lwc:if={isLoading}>
+        <lightning-spinner
+          alternative-text="Loading movies"
+        ></lightning-spinner>
+      </template>
+      <template lwc:if={errorMessage}>
+        <div class="slds-text-color_error" role="alert">{errorMessage}</div>
+      </template>
+      <div class="react-mount" lwc:dom="manual"></div>
+    </div>
+  </lightning-card>
+</template>
