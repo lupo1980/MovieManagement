@@ -1,51 +1,44 @@
 @isTest
 private class MovieConsumerTest {
-  private class MovieResponseMock implements HttpCalloutMock {
-    private Integer statusCode;
-    private String body;
-
-    MovieResponseMock(Integer statusCode, String body) {
-      this.statusCode = statusCode;
-      this.body = body;
-    }
-
-    public HttpResponse respond(HttpRequest request) {
-      System.assertEquals('GET', request.getMethod());
-      System.assertEquals(
-        'callout:Movie_Provider/services/apexrest/movies?pageNumber=2',
-        request.getEndpoint()
-      );
-
-      HttpResponse response = new HttpResponse();
-      response.setStatusCode(statusCode);
-      response.setBody(body);
-      return response;
-    }
+  @testSetup
+  static void setupData() {
+    insert new List<Movie__c>{
+      new Movie__c(Name = 'Arrival', Genre__c = 'Sci-Fi', IMDB_Rating__c = 8.0),
+      new Movie__c(Name = 'Jaws', Genre__c = 'Thriller', IMDB_Rating__c = 8.1),
+      new Movie__c(Name = 'Zodiac', Genre__c = 'Mystery', IMDB_Rating__c = 7.7)
+    };
   }
 
   @isTest
-  static void getMoviesReturnsPage() {
-    Test.setMock(
-      HttpCalloutMock.class,
-      new MovieResponseMock(
-        200,
-        '{"totalItems":1,"page":2,"perPage":1000,"data":[{"Name":"Arrival","Genre":"Sci-Fi","IMDB_Rating":8.0}]}'
-      )
-    );
-
+  static void getMoviesReturnsOrderedPage() {
     Test.startTest();
-    MovieConsumer.MoviePage result = MovieConsumer.getMovies(2);
+    MovieConsumer.MoviePage result = MovieConsumer.getMovies(1);
     Test.stopTest();
 
-    System.assertEquals(1, result.totalItems);
+    System.assertEquals(3, result.totalItems);
+    System.assertEquals(1, result.page);
+    System.assertEquals(MovieResource.PAGE_SIZE, result.perPage);
+    System.assertEquals(3, result.data.size());
     System.assertEquals('Arrival', result.data[0].Name);
+    System.assertEquals('Sci-Fi', result.data[0].Genre);
     System.assertEquals(8.0, result.data[0].IMDB_Rating);
   }
 
   @isTest
-  static void getMoviesRejectsInvalidPage() {
+  static void getMoviesReturnsEmptyPageWhenPageIsPastEnd() {
+    Test.startTest();
+    MovieConsumer.MoviePage result = MovieConsumer.getMovies(2);
+    Test.stopTest();
+
+    System.assertEquals(3, result.totalItems);
+    System.assertEquals(2, result.page);
+    System.assertEquals(0, result.data.size());
+  }
+
+  @isTest
+  static void getMoviesRejectsNullPage() {
     try {
-      MovieConsumer.getMovies(0);
+      MovieConsumer.getMovies(null);
       System.assert(false, 'Expected invalid page error.');
     } catch (AuraHandledException handledError) {
       System.assertEquals('Script-thrown exception', handledError.getMessage());
@@ -53,17 +46,10 @@ private class MovieConsumerTest {
   }
 
   @isTest
-  static void getMoviesRejectsProviderError() {
-    Test.setMock(
-      HttpCalloutMock.class,
-      new MovieResponseMock(500, '{"error":"failure"}')
-    );
-
+  static void getMoviesRejectsZeroPage() {
     try {
-      Test.startTest();
-      MovieConsumer.getMovies(2);
-      Test.stopTest();
-      System.assert(false, 'Expected provider error.');
+      MovieConsumer.getMovies(0);
+      System.assert(false, 'Expected invalid page error.');
     } catch (AuraHandledException handledError) {
       System.assertEquals('Script-thrown exception', handledError.getMessage());
     }
