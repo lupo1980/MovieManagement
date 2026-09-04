@@ -16,7 +16,8 @@ export default class MovieBrowser extends LightningElement {
 
     this.resourceLoad = loadScript(this, reactBundle)
       .then(() => this.loadPage(this.currentPage))
-      .catch(() => {
+      .catch((error) => {
+        console.log("Error loading React bundle:", error);
         this.isLoading = false;
         this.errorMessage = "The movie interface could not be loaded.";
       });

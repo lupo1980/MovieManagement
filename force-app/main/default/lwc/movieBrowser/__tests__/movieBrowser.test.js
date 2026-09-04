@@ -25,6 +25,7 @@ describe("c-movie-browser", () => {
       document.body.removeChild(document.body.firstChild);
     }
     jest.clearAllMocks();
+    delete window.MovieReact;
   });
 
   it("loads a page and mounts the React integration", async () => {
@@ -50,5 +51,24 @@ describe("c-movie-browser", () => {
     expect(loadScript).toHaveBeenCalled();
     expect(getMovies).toHaveBeenCalledWith({ pageNumber: 1 });
     expect(window.MovieReact.mount).toHaveBeenCalled();
+  });
+
+  it("shows an error when the React bundle fails to load", async () => {
+    const loadError = new Error("Unable to load static resource");
+    loadScript.mockRejectedValue(loadError);
+
+    const element = createElement("c-movie-browser", { is: MovieBrowser });
+    document.body.appendChild(element);
+
+    await element.resourceLoad;
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(getMovies).not.toHaveBeenCalled();
+    const card = element.shadowRoot.querySelector("lightning-card");
+    expect(card.querySelector('[role="alert"]').textContent).toBe(
+      "The movie interface could not be loaded."
+    );
+    expect(card.querySelector("lightning-spinner")).toBeNull();
   });
 });
