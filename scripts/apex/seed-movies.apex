@@ -18,7 +18,7 @@ List<String> secondWords = new List<String>{
 };
 
 List<Movie__c> movies = new List<Movie__c>();
-for (Integer index = 0; index < 100; index++) {
+for (Integer index = 0; index < 2500; index++) {
     Integer firstIndex = Math.mod(index * 7 + 3, firstWords.size());
     Integer secondIndex = Math.mod(index * 11 + 5, secondWords.size());
     Integer genreIndex = Math.mod(index * 13 + 2, genres.size());
