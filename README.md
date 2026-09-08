@@ -1,83 +1,69 @@
 # Movie Management
 
-Movie Management is a Salesforce DX project that exposes movie records through an Apex REST resource. A second Salesforce org will consume that API through a planned `MovieConsumer` service and display the records in a Lightning Web Component (LWC).
+This project is a Salesforce DX app that demonstrates an embedded React example hosted inside a Lightning Web Component.
 
-The project currently contains the provider side of the integration. The consumer and the event-driven notification utility are part of the planned roadmap.
+The current code is intentionally an example of React running inside LWC, not a completed sort/filter feature. The actual implementation in this repo is the LWC + React integration pattern, and the sorting/filtering work is planned as a separate React component to be built later.
 
-## Current API
+## Current implementation
 
-`MovieResource` is a global, `with sharing` Apex REST class mapped to `/movies/*`.
+### LWC host component
 
-### Request
+The `movieBrowser` LWC in `force-app/main/default/lwc/movieBrowser/` is responsible for:
+
+- loading the React bundle via `lightning/platformResourceLoader`
+- calling `MovieConsumer.getMovies({ pageNumber })`
+- mounting the React app into a manual DOM container
+- updating the React view when the user changes pages
+
+Runtime flow:
+
+```text
+movieBrowser LWC
+  -> load React bundle from static resource
+  -> call Apex getMovies(pageNumber)
+  -> mount the table into the DOM
+  -> render the current page of movies
+```
+
+### Apex data access
+
+`MovieConsumer` is the data entry point used by the LWC. It validates the page number and reads records using `MovieDataManager`.
+
+The current page response contains:
+
+- `totalItems`
+- `page`
+- `perPage`
+- `data`
+
+Each movie item includes:
+
+- `Name`
+- `Genre`
+- `IMDB_Rating`
+
+The project also contains `MovieResource`, which exposes the same movie data through the Apex REST endpoint:
 
 ```http
 GET /services/apexrest/movies?pageNumber=1
 ```
 
-`pageNumber` is required and starts at `1`. Each response contains at most `1,000` records. The current query orders records by `CreatedDate DESC, Id DESC`, so the newest movies are returned first.
+## React example inside LWC
 
-### Response
+The React source is in `react-app/src/main.jsx`.
 
-```json
-{
-  "totalItems": 2500,
-  "page": 1,
-  "perPage": 1000,
-  "data": [
-    {
-      "Name": "Movie 1",
-      "Genre": "Action",
-      "IMDB_Rating": 8.4
-    }
-  ]
-}
-```
+It renders a sample movie browser with:
 
-The API exposes the following fields from `Movie__c`:
+- title, genre, and IMDb rating columns
+- previous and next page controls
+- a simple filter/search state
+- sort-by and sort-direction controls
 
-| API field     | Salesforce field          | Description |
-| ------------- | ------------------------- | ----------- |
-| `Name`        | `Movie__c.Name`           | Movie title |
-| `Genre`       | `Movie__c.Genre__c`       | Movie genre |
-| `IMDB_Rating` | `Movie__c.IMDB_Rating__c` | IMDb rating |
+This is an example of React being hosted inside an LWC. It is not yet a final or isolated feature component for production sorting/filtering logic. The code is meant to show the integration pattern and the UI shell, while keeping the actual sort/filter implementation for a separate React component in the next step.
 
-Invalid or missing page numbers return HTTP `400`. Unexpected server errors return HTTP `500`.
+## Build and deploy
 
-## Planned MovieConsumer
-
-`MovieConsumer` will be developed in the consuming Salesforce org. Its responsibility will be to call the provider org, transform the JSON response into a view model, and provide the data to an LWC.
-
-The intended flow is:
-
-```text
-Consumer LWC -> MovieConsumer Apex -> Named Credential / OAuth -> MovieResource
-																									 <- JSON page <-
-```
-
-### Cross-org connection
-
-The consumer should use a Salesforce **Named Credential** rather than hard-coded URLs or credentials:
-
-1. Create a Connected App in the provider org.
-2. Configure OAuth authentication and the required scopes.
-3. Create an External Credential and Named Credential in the consumer org.
-4. Give the integration principal permission to use the credential.
-5. Perform the Apex callout using the Named Credential endpoint, for example:
-
-```apex
-HttpRequest request = new HttpRequest();
-request.setEndpoint('callout:Movie_Provider/services/apexrest/movies?pageNumber=1');
-request.setMethod('GET');
-HttpResponse response = new Http().send(request);
-```
-
-The consumer should validate the HTTP status, handle an empty page, and surface authentication, timeout, and malformed-response errors to the LWC in a user-friendly way.
-
-## React LWC integration
-
-The consumer UI can host the React movie table as a Salesforce Static Resource. The LWC wrapper loads `movieReactBundle`, calls `MovieConsumer`, and mounts React into a manual DOM container. React does not make provider callouts or contain OAuth credentials.
-
-Build the bundle from the repository root with:
+From the repo root:
 
 ```bash
 cd react-app
@@ -85,183 +71,40 @@ npm install
 npm run build
 ```
 
-The build writes `force-app/main/default/staticresources/movieReactBundle.resource`. Deploy that resource together with the `movieBrowser` LWC and `MovieConsumer` Apex class. The consuming org must provide the `Movie_Provider` Named Credential and grant the integration principal access to it.
-
-## Planned LWC sorting
-
-The LWC will present the movie records in a table or data grid and allow users to order them by genre and IMDb rating.
-
-### Option 1: sort in Apex
-
-Server-side sorting is preferable when the consumer must sort the complete dataset or when the number of records can grow. The provider query could accept a validated sort option and apply a fixed allow-list of fields:
-
-```apex
-// Example query shape; validate the requested field and direction first.
-List<Movie__c> movies = [
-		SELECT Id, Name, Genre__c, IMDB_Rating__c
-		FROM Movie__c
-		ORDER BY Genre__c ASC, IMDB_Rating__c DESC, Id ASC
-		LIMIT :pageSize
-		OFFSET :offset
-];
-```
-
-Dynamic SOQL must never concatenate an unchecked field name or sort direction. A fixed map of allowed values is required. Sorting in the API also keeps pagination correct because ordering happens before the page is selected.
-
-### Option 2: sort in JavaScript
-
-Client-side sorting is simple when the LWC has already loaded the records it needs. The comparator should handle blank genres and ratings consistently:
-
-```js
-sortMovies(movies, field, direction = 'asc') {
-		const multiplier = direction === 'desc' ? -1 : 1;
-
-		return [...movies].sort((left, right) => {
-				const leftValue = left[field] ?? '';
-				const rightValue = right[field] ?? '';
-
-				if (leftValue === rightValue) {
-						return 0;
-				}
-
-				return (leftValue > rightValue ? 1 : -1) * multiplier;
-		});
-}
-```
-
-JavaScript sorting only affects the records currently loaded in the browser. It is therefore appropriate for a small result set or for sorting one page, but it does not provide a globally sorted, paginated result.
-
-## Future Platform Events utility
-
-After the consumer is working, a reusable LWC utility will subscribe to a Platform Event channel so the UI can react when a new movie is created. The planned design is:
+This generates the bundle used by the LWC from the Salesforce static resource path:
 
 ```text
-Movie creation -> Movie__c trigger/automation -> Movie_Created__e
-																									 |
-												 utility LWC <- EMP API / lightning/empApi
-																									 |
-																			refresh MovieConsumer data
+force-app/main/default/staticresources/movieReactBundle.resource
 ```
 
-The utility will use the Lightning `empApi` module to subscribe to the event channel, for example `/event/Movie_Created__e`. It should expose a small event contract to host components, unsubscribe when disconnected, and reconnect or report a meaningful state when the streaming connection is interrupted.
-
-The Platform Event should contain only the data needed by subscribers, such as the movie record ID and an event timestamp. The consumer should still refresh or retrieve the authoritative movie record through the API instead of treating the event payload as the complete source of truth.
+Deploy the generated resource alongside the related Apex and LWC metadata.
 
 ## Project structure
 
-- **`force-app/main/default/classes/`** - Apex REST resource and tests
-- **`force-app/main/default/objects/Movie__c/`** - Movie object and custom fields
-- **`force-app/main/default/lwc/`** - Lightning Web Components, including the planned consumer UI
-- **`scripts/apex/`** - Anonymous Apex scripts for development and data seeding
-- **`config/`** - Scratch org definitions
-- **`manifest/`** - Metadata package manifest
+- `force-app/main/default/classes/` - Apex classes and REST/data access logic
+- `force-app/main/default/lwc/movieBrowser/` - LWC wrapper and mount point
+- `force-app/main/default/staticresources/` - compiled React bundle used by the LWC
+- `react-app/src/` - React source that demonstrates the embedded UI
+- `scripts/apex/` - helper Apex scripts and data setup utilities
+- `config/` - scratch org config
+- `manifest/` - metadata manifest
 
-## Prerequisites
+## Planned next step
 
-Before you start, make sure you have:
+The next logical enhancement is to extract the sorting and genre-filter behavior into a separate React component, for example:
 
-- **Salesforce CLI** - Download from [developer.salesforce.com/tools/salesforcecli](https://developer.salesforce.com/tools/salesforcecli). See [Install Salesforce CLI](https://developer.salesforce.com/docs/atlas.en-us.sfdx_setup.meta/sfdx_setup/sfdx_setup_install_cli.htm) for details.
-- **VS Code with Salesforce Extension Pack** - See [Installation Instructions](https://developer.salesforce.com/docs/platform/sfvscode-extensions/guide/install.html) for details. Includes the Agentforce Vibes extension.
-- **A development org** - Sign up for a free Developer Edition org [here](https://developer.salesforce.com/signup).
-- **Dev Hub enabled** (optional, required to create scratch orgs) - You can enable Dev Hub in your development org under Setup > Dev Hub. See [Provide Developers Access to Salesforce DX Tools](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_setup_dx_tools.htm).
+- a dedicated sort controls component
+- a dedicated genre filter component
+- a parent component that combines the selected state with the current page data
 
-## Project Structure
+This should be built in a separate React component rather than being mixed into the current embedded example. The current implementation remains an example of React inside LWC and should not be treated as the finished feature architecture for sorting or filtering.
 
-Your DX project follows this structure:
+## Notes
 
-- **`force-app/main/default/`** - Your metadata source files live in this default package directory. You can configure additional package directories in the `sfdx-project.json` file.
-- **`config/`** - Scratch org definitions and project settings
-- **`scripts/`** - Automation scripts for common tasks
-- **`sfdx-project.json`** - Project manifest that defines package directories, namespace, API version, and other project-level settings
+This repo already reflects the actual architecture in use today:
 
-See [Salesforce DX Project Configuration](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_ws_config.htm).
+- Salesforce Apex provides paged movie data
+- the LWC loads a React bundle as a static resource
+- the React UI is an embedded example inside the LWC host
 
-## Get Started
-
-Ready to start developing? The [Get Started with Salesforce DX](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_get_started_dx.htm) guide walks you through your first project, from creating a scratch org to creating a simple Apex class or LWC to deploying your code to a sandbox.
-
-## Common Salesforce CLI Commands
-
-Here are common CLI commands that you'll use the most:
-
-- `sf org login web`: Authorize an org
-- `sf org open`: Open your org in a browser
-- `sf org create scratch`: Create a scratch org
-- `sf project deploy start`: Deploy metadata to your org
-- `sf project retrieve start`: Retrieve metadata from your org
-- `sf template generate <artifact>`: Scaffold new components, such as Apex classes and triggers, LWC components, Lightning apps, and more
-- `sf apex <command>`: Run Apex tests, run anonymous Apex blocks, and view logs
-- `sf data <command>`: Work with test data
-- `sf alias <command>`: Manage org aliases
-- `sf config <command>`: Configure CLI settings
-
-## Use Agentforce Vibes to Build Lightning Apps
-
-Transform your ideas into custom Lightning apps that extend CRM workflows directly in Lightning Experience. Through natural conversations with Agentforce Vibes, implement custom objects and fields, complex business logic, and dynamic UI components. See [Build a Lightning App Using Agentforce Vibes](https://developer.salesforce.com/docs/platform/einstein-for-devs/guide/lexapp-overview.html).
-
-## Additional Resources
-
-- [Agentforce Vibes Developer Guide](https://developer.salesforce.com/docs/platform/einstein-for-devs/guide/einstein-overview.html)
-- [Salesforce CLI Installation Guide](https://developer.salesforce.com/docs/atlas.en-us.sfdx_setup.meta/sfdx_setup/sfdx_setup_intro.htm)
-- [Salesforce DX Developer Guide](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/)
-- [Salesforce CLI Command Reference](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/)
-- [Salesforce CLI Plugin Development Guide](https://developer.salesforce.com/docs/platform/salesforce-cli-plugin/guide/conceptual-overview.html)
-- [Salesforce VS Code Extensions Documentation](https://developer.salesforce.com/tools/vscode/)
-
-# Salesforce DX Project
-
-Salesforce DX is a development approach that brings source-driven development, team collaboration, and continuous integration to the Salesforce Platform. Instead of working directly in an org through a web browser, you work with metadata as source files in a local DX project, track changes in version control, and deploy through automated processes.
-
-This project template gets you started with the tools and structure you need to build Salesforce applications using source control, scratch orgs, and the Salesforce CLI.
-
-## Prerequisites
-
-Before you start, make sure you have:
-
-- **Salesforce CLI** - Download from [developer.salesforce.com/tools/salesforcecli](https://developer.salesforce.com/tools/salesforcecli). See [Install Salesforce CLI](https://developer.salesforce.com/docs/atlas.en-us.sfdx_setup.meta/sfdx_setup/sfdx_setup_install_cli.htm) for details.
-- **VS Code with Salesforce Extension Pack** - See [Installation Instructions](https://developer.salesforce.com/docs/platform/sfvscode-extensions/guide/install.html) for details. Includes the Agentforce Vibes extension.
-- **A development org** - Sign up for a free Developer Edition org [here](https://developer.salesforce.com/signup).
-- **Dev Hub enabled** (optional, required to create scratch orgs) - You can enable Dev Hub in your development org under Setup > Dev Hub. See [Provide Developers Access to Salesforce DX Tools](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_setup_dx_tools.htm).
-
-## Project Structure
-
-Your DX project follows this structure:
-
-- **`force-app/main/default/`** - Your metadata source files live in this default package directory. You can configure additional package directories in the `sfdx-project.json` file.
-- **`config/`** - Scratch org definitions and project settings
-- **`scripts/`** - Automation scripts for common tasks
-- **`sfdx-project.json`** - Project manifest that defines package directories, namespace, API version, and other project-level settings
-
-See [Salesforce DX Project Configuration](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_ws_config.htm).
-
-## Get Started
-
-Ready to start developing? The [Get Started with Salesforce DX](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_get_started_dx.htm) guide walks you through your first project, from creating a scratch org to creating a simple Apex class or LWC to deploying your code to a sandbox.
-
-## Common Salesforce CLI Commands
-
-Here are common CLI commands that you'll use the most:
-
-- `sf org login web`: Authorize an org
-- `sf org open`: Open your org in a browser
-- `sf org create scratch`: Create a scratch org
-- `sf project deploy start`: Deploy metadata to your org
-- `sf project retrieve start`: Retrieve metadata from your org
-- `sf template generate <artifact>`: Scaffold new components, such as Apex classes and triggers, LWC components, Lightning apps, and more
-- `sf apex <command>`: Run Apex tests, run anonymous Apex blocks, and view logs
-- `sf data <command>`: Work with test data
-- `sf alias <command>`: Manage org aliases
-- `sf config <command>`: Configure CLI settings
-
-## Use Agentforce Vibes to Build Lightning Apps
-
-Transform your ideas into custom Lightning apps that extend CRM workflows directly in Lightning Experience. Through natural conversations with Agentforce Vibes, implement custom objects and fields, complex business logic, and dynamic UI components. See [Build a Lightning App Using Agentforce Vibes](https://developer.salesforce.com/docs/platform/einstein-for-devs/guide/lexapp-overview.html).
-
-## Additional Resources
-
-- [Agentforce Vibes Developer Guide](https://developer.salesforce.com/docs/platform/einstein-for-devs/guide/einstein-overview.html)
-- [Salesforce CLI Installation Guide](https://developer.salesforce.com/docs/atlas.en-us.sfdx_setup.meta/sfdx_setup/sfdx_setup_intro.htm)
-- [Salesforce DX Developer Guide](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/)
-- [Salesforce CLI Command Reference](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/)
-- [Salesforce CLI Plugin Development Guide](https://developer.salesforce.com/docs/platform/salesforce-cli-plugin/guide/conceptual-overview.html)
-- [Salesforce VS Code Extensions Documentation](https://developer.salesforce.com/tools/vscode/)
+The sorting and filter-by-genre feature is a future follow-up task, not part of the current implementation.
