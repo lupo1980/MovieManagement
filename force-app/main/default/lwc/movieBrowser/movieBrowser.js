@@ -2,7 +2,12 @@ import { LightningElement } from "lwc";
 import getMovies from "@salesforce/apex/MovieConsumer.getMovies";
 import { loadScript } from "lightning/platformResourceLoader";
 import reactBundle from "@salesforce/resourceUrl/movieReactBundle";
-
+/**
+ * Example of a Lightning Web Component that loads a React application from a static resource and displays it in the component.
+ * The React application is expected to expose a global object `MovieReact` with a `mount` method that takes a DOM element and a page of movies.
+ * The component handles loading the React bundle, fetching movie data from an Apex controller, and passing it to the React app.
+ * It also handles errors and displays an error message if the React app cannot be loaded or if there is an issue fetching movie data.
+ */
 export default class MovieBrowser extends LightningElement {
   isLoading = true;
   errorMessage;
