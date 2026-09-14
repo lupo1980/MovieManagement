@@ -1,7 +1,5 @@
 <template>
-  <lightning-modal-header
-    label="Write your review for {movieSelected.name}"
-  ></lightning-modal-header>
+  <lightning-modal-header label={movieSelected.name}></lightning-modal-header>
   <lightning-modal-body>
     <lightning-input
       label="Nickname (User)"
@@ -10,7 +8,7 @@
     ></lightning-input>
 
     <lightning-textarea
-      label="Review"
+      label="Write your review"
       value={reviewText}
       onchange={handleChangeReviewText}
     ></lightning-textarea>
