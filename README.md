@@ -1,14 +1,26 @@
 # Movie Management
 
-This project is a Salesforce DX app that demonstrates an embedded React example hosted inside a Lightning Web Component.
+This project is a Salesforce DX movie-management app with Lightning Web Components, Apex data access, user movie reviews, and an embedded React example.
 
-The current code is intentionally an example of React running inside LWC, not a completed sort/filter feature. The actual implementation in this repo is the LWC + React integration pattern, and the sorting/filtering work is planned as a separate React component to be built later.
+The main user-facing flow lets users search for movies, select a movie, and submit a review with a score from 0 to 5. The project also includes a separate React-in-LWC integration example backed by paged movie data.
 
 ## Current implementation
 
-### LWC host component
+### Movie review components
 
-The `movieBrowser` LWC in `force-app/main/default/lwc/movieBrowser/` is responsible for:
+The `movieReviewUser` LWC in `force-app/main/default/lwc/movieReviewUser/` provides the movie search and review entry point. It:
+
+- searches movies by title after the user enters more than two characters
+- displays each matching movie with its genre and IMDb rating
+- opens the `modalUserReview` Lightning modal when a movie is selected
+- passes the selected movie and the current Salesforce user's name to the modal
+- displays a success toast after a review is submitted
+
+The `modalUserReview` LWC collects the review text and score. It calls `MovieReviewUser.submitReview` and displays an error toast when submission fails.
+
+### React example host component
+
+The `movieBrowser` LWC in `force-app/main/default/lwc/movieBrowser/` demonstrates an embedded React application. It is responsible for:
 
 - loading the React bundle via `lightning/platformResourceLoader`
 - calling `MovieConsumer.getMovies({ pageNumber })`
@@ -48,18 +60,35 @@ The project also contains `MovieResource`, which exposes the same movie data thr
 GET /services/apexrest/movies?pageNumber=1
 ```
 
+## Apex review and movie services
+
+`MovieReviewUser` provides the Apex methods used by the review flow:
+
+- `getMovies(movieTitle)` searches `Movie__c` records by name and returns genre and IMDb rating data.
+- `submitReview(movieId, reviewText, nickname, score)` validates the review, inserts a `Movie_Review__c` record, and returns its ID.
+
+Review submission rejects blank review text, a missing movie ID, and scores outside the inclusive range of 0 to 5.
+
+`MovieReviewUser` is declared `with sharing`, so the service respects the running user's sharing rules.
+
+`MovieResource` exposes the paged movie data through the Apex REST endpoint:
+
+```http
+GET /services/apexrest/movies?pageNumber=1
+```
+
 ## React example inside LWC
 
 The React source is in `react-app/src/main.jsx`.
 
-It renders a sample movie browser with:
+It renders a sample paged movie browser with:
 
 - title, genre, and IMDb rating columns
 - previous and next page controls
 - a simple filter/search state
 - sort-by and sort-direction controls
 
-This is an example of React being hosted inside an LWC. It is not yet a final or isolated feature component for production sorting/filtering logic. The code is meant to show the integration pattern and the UI shell, while keeping the actual sort/filter implementation for a separate React component in the next step.
+This remains an example of React being hosted inside an LWC. The production movie search and review workflow is implemented separately in the `movieReviewUser` and `modalUserReview` LWCs.
 
 ## Build and deploy
 
@@ -79,32 +108,38 @@ force-app/main/default/staticresources/movieReactBundle.resource
 
 Deploy the generated resource alongside the related Apex and LWC metadata.
 
+Run the LWC unit tests and lint checks from the repository root:
+
+```bash
+npm install
+npm test
+npm run lint
+```
+
+For test coverage:
+
+```bash
+npm run test:unit:coverage
+```
+
 ## Project structure
 
 - `force-app/main/default/classes/` - Apex classes and REST/data access logic
 - `force-app/main/default/lwc/movieBrowser/` - LWC wrapper and mount point
+- `force-app/main/default/lwc/movieReviewUser/` - movie title search and review entry point
+- `force-app/main/default/lwc/modalUserReview/` - review submission modal
 - `force-app/main/default/staticresources/` - compiled React bundle used by the LWC
 - `react-app/src/` - React source that demonstrates the embedded UI
 - `scripts/apex/` - helper Apex scripts and data setup utilities
 - `config/` - scratch org config
 - `manifest/` - metadata manifest
 
-## Planned next step
-
-The next logical enhancement is to extract the sorting and genre-filter behavior into a separate React component, for example:
-
-- a dedicated sort controls component
-- a dedicated genre filter component
-- a parent component that combines the selected state with the current page data
-
-This should be built in a separate React component rather than being mixed into the current embedded example. The current implementation remains an example of React inside LWC and should not be treated as the finished feature architecture for sorting or filtering.
-
 ## Notes
 
-This repo already reflects the actual architecture in use today:
+The current architecture is:
 
 - Salesforce Apex provides paged movie data
-- the LWC loads a React bundle as a static resource
+- `movieReviewUser` provides title search and opens the review modal
+- `modalUserReview` submits validated reviews through Apex
+- the `movieBrowser` LWC loads a React bundle as a static resource
 - the React UI is an embedded example inside the LWC host
-
-The sorting and filter-by-genre feature is a future follow-up task, not part of the current implementation.

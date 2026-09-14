@@ -1,0 +1,40 @@
+<template>
+  <lightning-card title="Movies" icon-name="standard:movie">
+    <div class="slds-p-horizontal_medium">
+      <lightning-input
+        label="Search Movie Title"
+        value={movieTitleSearch}
+        onchange={handleMovieTitleChange}
+      ></lightning-input>
+    </div>
+  </lightning-card>
+
+  <template lwc:if={error}>
+    <div class="slds-alert slds-alert_error" role="alert">
+      <p>{error}</p>
+      <p>{stack}</p>
+    </div>
+  </template>
+
+  <template if:true={movies}>
+    <div class="slds-p-horizontal_medium">
+      <template for:each={movies} for:item="movie">
+        <a
+          href="#"
+          key={movie.Id}
+          data-movie-id={movie.Id}
+          data-movie-name={movie.Name}
+          onclick={handleMovieClick}
+        >
+          <div class="slds-box slds-m-around_small">
+            <p class="slds-text-heading_small">{movie.Name}</p>
+            <p class="slds-text-body_regular">{movie.Genre__c}</p>
+            <p class="slds-text-body_regular">
+              IMDB Rating: {movie.IMDB_Rating__c}
+            </p>
+          </div>
+        </a>
+      </template>
+    </div>
+  </template>
+</template>

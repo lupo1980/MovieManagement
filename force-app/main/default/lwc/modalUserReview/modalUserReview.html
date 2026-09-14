@@ -1,0 +1,33 @@
+<template>
+  <lightning-modal-header
+    label="Write your review for {movieSelected.name}"
+  ></lightning-modal-header>
+  <lightning-modal-body>
+    <lightning-input
+      label="Nickname (User)"
+      value={nickname}
+      readonly
+    ></lightning-input>
+
+    <lightning-textarea
+      label="Review"
+      value={reviewText}
+      onchange={handleChangeReviewText}
+    ></lightning-textarea>
+
+    <lightning-slider
+      label="Score"
+      value={score}
+      min="0"
+      max="5"
+      step="1"
+      onchange={handleChangeScore}
+    ></lightning-slider>
+
+    <lightning-button
+      label="Submit Review"
+      variant="brand"
+      onclick={handleSubmitReview}
+    ></lightning-button>
+  </lightning-modal-body>
+</template>
