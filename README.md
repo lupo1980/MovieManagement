@@ -18,6 +18,8 @@ The `movieReviewUser` LWC in `force-app/main/default/lwc/movieReviewUser/` provi
 
 The `modalUserReview` LWC collects the review text and score. It calls `MovieReviewUser.submitReview` and displays an error toast when submission fails.
 
+The review modal also displays the selected score while the user adjusts the slider. Its review instruction uses the `Movie_Review_Instruction` custom label through the shared `labelUtility` LWC module, with translations defined for English and Spanish. Component-level errors are captured and rendered in the modal's error alert.
+
 ### React example host component
 
 The `movieBrowser` LWC in `force-app/main/default/lwc/movieBrowser/` demonstrates an embedded React application. It is responsible for:
@@ -90,6 +92,15 @@ It renders a sample paged movie browser with:
 
 This remains an example of React being hosted inside an LWC. The production movie search and review workflow is implemented separately in the `movieReviewUser` and `modalUserReview` LWCs.
 
+## Labels and translations
+
+Shared Salesforce custom labels used by LWCs are imported through `force-app/main/default/lwc/labelUtility/labelUtility.js`. The `Movie_Review_Instruction` label is defined in `force-app/main/default/labels/CustomLabels.labels-meta.xml`, and localized values are maintained in:
+
+- `force-app/main/default/translations/en_US.translation-meta.xml`
+- `force-app/main/default/translations/es.translation-meta.xml`
+
+This keeps label imports centralized and allows the review UI to use Salesforce translations without duplicating label references across components.
+
 ## Build and deploy
 
 From the repo root:
@@ -128,6 +139,9 @@ npm run test:unit:coverage
 - `force-app/main/default/lwc/movieBrowser/` - LWC wrapper and mount point
 - `force-app/main/default/lwc/movieReviewUser/` - movie title search and review entry point
 - `force-app/main/default/lwc/modalUserReview/` - review submission modal
+- `force-app/main/default/lwc/labelUtility/` - centralized custom-label exports for LWCs
+- `force-app/main/default/labels/` - Salesforce custom-label metadata
+- `force-app/main/default/translations/` - localized custom-label values
 - `force-app/main/default/staticresources/` - compiled React bundle used by the LWC
 - `react-app/src/` - React source that demonstrates the embedded UI
 - `scripts/apex/` - helper Apex scripts and data setup utilities
