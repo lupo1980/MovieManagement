@@ -1,4 +1,10 @@
 <template>
+  <template lwc:if={error}>
+    <div class="slds-alert slds-alert_error" role="alert">
+      <p>{error}</p>
+    </div>
+  </template>
+
   <lightning-modal-header label={movieSelected.name}></lightning-modal-header>
   <lightning-modal-body>
     <lightning-input
@@ -8,7 +14,7 @@
     ></lightning-input>
 
     <lightning-textarea
-      label="Write your review"
+      label={myLabel.movieReviewInstruction}
       value={reviewText}
       onchange={handleChangeReviewText}
     ></lightning-textarea>
@@ -22,7 +28,12 @@
       onchange={handleChangeScore}
     ></lightning-slider>
 
+    <div class="slds-m-top_small">
+      <p>Selected Score: {score}</p>
+    </div>
+
     <lightning-button
+      class="slds-m-bottom_small"
       label="Submit Review"
       variant="brand"
       onclick={handleSubmitReview}

@@ -1,13 +1,23 @@
 import LightningModal from "lightning/modal";
 import submitReview from "@salesforce/apex/MovieReviewUser.submitReview";
-import { api } from "lwc";
+import { api, track } from "lwc";
 import { ShowToastEvent } from "lightning/platformShowToastEvent";
 
+import { label } from "c/labelUtility";
 export default class ModalUserReview extends LightningModal {
   @api movieSelected;
   @api nickname;
   reviewText;
   score;
+
+  error;
+
+  @track myLabel = label;
+
+  errorCallback(error, stack) {
+    console.error("Error in modalUserReview component:", error, stack);
+    this.error = error;
+  }
 
   handleChangeReviewText(event) {
     this.reviewText = event.target.value;
