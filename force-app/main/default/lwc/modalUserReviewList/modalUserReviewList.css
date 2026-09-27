@@ -1,0 +1,23 @@
+.review-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 1rem;
+}
+
+.review-card {
+  min-width: 0;
+}
+
+.review-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.review-score {
+  font-weight: 700;
+}
+
+.action-row {
+  display: flex;
+  gap: 0.5rem;
+}

@@ -1,109 +1,51 @@
 # Movie Management
 
-This project is a Salesforce DX movie-management app with Lightning Web Components, Apex data access, user movie reviews, and an embedded React example.
+A Salesforce DX sample app for browsing movies, submitting reviews, and demonstrating Lightning Web Component patterns with Apex-backed data access.
 
-The main user-facing flow lets users search for movies, select a movie, and submit a review with a score from 0 to 5. The project also includes a separate React-in-LWC integration example backed by paged movie data.
+## Short summary
 
-## Current implementation
+This project combines:
 
-### Movie review components
+- A movie search experience in LWC
+- Apex classes for data access and review submission
+- A review workflow that includes modal-based user interactions
+- A small React example embedded inside an LWC for demonstration purposes
 
-The `movieReviewUser` LWC in `force-app/main/default/lwc/movieReviewUser/` provides the movie search and review entry point. It:
+## Lightning Modal example
 
-- searches movies by title after the user enters more than two characters
-- displays each matching movie with its genre and IMDb rating
-- opens the `modalUserReview` Lightning modal when a movie is selected
-- passes the selected movie and the current Salesforce user's name to the modal
-- displays a success toast after a review is submitted
+The app includes a concrete example of a Salesforce Lightning Modal for reviewing movies. The modal UI is implemented in:
 
-The `modalUserReview` LWC collects the review text and score. It calls `MovieReviewUser.submitReview` and displays an error toast when submission fails.
+- `force-app/main/default/lwc/modalUserReviewList/modalUserReviewList.js`
+- `force-app/main/default/lwc/modalUserReviewList/modalUserReviewList.html`
 
-The review modal also displays the selected score while the user adjusts the slider. Its review instruction uses the `Movie_Review_Instruction` custom label through the shared `labelUtility` LWC module, with translations defined for English and Spanish. Component-level errors are captured and rendered in the modal's error alert.
+It demonstrates how to:
 
-### React example host component
+- load reviews for a selected movie
+- edit an existing review inline
+- validate review text and score
+- save and delete reviews
+- display success and error notifications using `ShowToastEvent`
 
-The `movieBrowser` LWC in `force-app/main/default/lwc/movieBrowser/` demonstrates an embedded React application. It is responsible for:
+This makes it a practical reference for building modal-driven UX patterns in Salesforce LWC.
 
-- loading the React bundle via `lightning/platformResourceLoader`
-- calling `MovieConsumer.getMovies({ pageNumber })`
-- mounting the React app into a manual DOM container
-- updating the React view when the user changes pages
+## Main components
 
-Runtime flow:
+- `movieReviewUser` — search for movies and launch the review flow
+- `modalUserReview` — submit a new review
+- `modalUserReviewList` — review list with edit and delete actions
+- `movieBrowser` — embedded React example inside an LWC
+- Apex classes — data access and server-side validation
 
-```text
-movieBrowser LWC
-  -> load React bundle from static resource
-  -> call Apex getMovies(pageNumber)
-  -> mount the table into the DOM
-  -> render the current page of movies
-```
+## Project structure
 
-### Apex data access
+- `force-app/main/default/classes/` — Apex logic
+- `force-app/main/default/lwc/` — Lightning components
+- `react-app/` — React source example
+- `scripts/apex/` — helper Apex scripts
+- `config/` — scratch org metadata
+- `manifest/` — deployment manifest
 
-`MovieConsumer` is the data entry point used by the LWC. It validates the page number and reads records using `MovieDataManager`.
-
-The current page response contains:
-
-- `totalItems`
-- `page`
-- `perPage`
-- `data`
-
-Each movie item includes:
-
-- `Name`
-- `Genre`
-- `IMDB_Rating`
-
-The project also contains `MovieResource`, which exposes the same movie data through the Apex REST endpoint:
-
-```http
-GET /services/apexrest/movies?pageNumber=1
-```
-
-## Apex review and movie services
-
-`MovieReviewUser` provides the Apex methods used by the review flow:
-
-- `getMovies(movieTitle)` searches `Movie__c` records by name and returns genre and IMDb rating data.
-- `submitReview(movieId, reviewText, nickname, score)` validates the review, inserts a `Movie_Review__c` record, and returns its ID.
-
-Review submission rejects blank review text, a missing movie ID, and scores outside the inclusive range of 0 to 5.
-
-`MovieReviewUser` is declared `with sharing`, so the service respects the running user's sharing rules.
-
-`MovieResource` exposes the paged movie data through the Apex REST endpoint:
-
-```http
-GET /services/apexrest/movies?pageNumber=1
-```
-
-## React example inside LWC
-
-The React source is in `react-app/src/main.jsx`.
-
-It renders a sample paged movie browser with:
-
-- title, genre, and IMDb rating columns
-- previous and next page controls
-- a simple filter/search state
-- sort-by and sort-direction controls
-
-This remains an example of React being hosted inside an LWC. The production movie search and review workflow is implemented separately in the `movieReviewUser` and `modalUserReview` LWCs.
-
-## Labels and translations
-
-Shared Salesforce custom labels used by LWCs are imported through `force-app/main/default/lwc/labelUtility/labelUtility.js`. The `Movie_Review_Instruction` label is defined in `force-app/main/default/labels/CustomLabels.labels-meta.xml`, and localized values are maintained in:
-
-- `force-app/main/default/translations/en_US.translation-meta.xml`
-- `force-app/main/default/translations/es.translation-meta.xml`
-
-This keeps label imports centralized and allows the review UI to use Salesforce translations without duplicating label references across components.
-
-## Build and deploy
-
-From the repo root:
+## Build and test
 
 ```bash
 cd react-app
@@ -111,15 +53,7 @@ npm install
 npm run build
 ```
 
-This generates the bundle used by the LWC from the Salesforce static resource path:
-
-```text
-force-app/main/default/staticresources/movieReactBundle.resource
-```
-
-Deploy the generated resource alongside the related Apex and LWC metadata.
-
-Run the LWC unit tests and lint checks from the repository root:
+From the repo root:
 
 ```bash
 npm install
@@ -127,33 +61,6 @@ npm test
 npm run lint
 ```
 
-For test coverage:
-
-```bash
-npm run test:unit:coverage
-```
-
-## Project structure
-
-- `force-app/main/default/classes/` - Apex classes and REST/data access logic
-- `force-app/main/default/lwc/movieBrowser/` - LWC wrapper and mount point
-- `force-app/main/default/lwc/movieReviewUser/` - movie title search and review entry point
-- `force-app/main/default/lwc/modalUserReview/` - review submission modal
-- `force-app/main/default/lwc/labelUtility/` - centralized custom-label exports for LWCs
-- `force-app/main/default/labels/` - Salesforce custom-label metadata
-- `force-app/main/default/translations/` - localized custom-label values
-- `force-app/main/default/staticresources/` - compiled React bundle used by the LWC
-- `react-app/src/` - React source that demonstrates the embedded UI
-- `scripts/apex/` - helper Apex scripts and data setup utilities
-- `config/` - scratch org config
-- `manifest/` - metadata manifest
-
 ## Notes
 
-The current architecture is:
-
-- Salesforce Apex provides paged movie data
-- `movieReviewUser` provides title search and opens the review modal
-- `modalUserReview` submits validated reviews through Apex
-- the `movieBrowser` LWC loads a React bundle as a static resource
-- the React UI is an embedded example inside the LWC host
+This repository is intended as a lightweight Salesforce example app for LWC patterns, Apex service logic, and an embedded React/Lightning integration workflow.

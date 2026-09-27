@@ -1,0 +1,86 @@
+<template>
+  <template lwc:if={hasError}>
+    <div class="slds-text-color_error slds-m-bottom_small" role="alert">
+      {error}
+    </div>
+  </template>
+
+  <lightning-modal-header label={movieName}></lightning-modal-header>
+
+  <template lwc:if={hasReviews}>
+    <div class="review-grid">
+      <template for:each={reviewCards} for:item="review">
+        <article key={review.Id} class="review-card">
+          <lightning-card
+            title={review.Nickname__c}
+            icon-name="standard:feedback"
+          >
+            <div class="slds-p-horizontal_small slds-p-bottom_small">
+              <template lwc:if={review.Status__c}>
+                <lightning-badge label={review.Status__c}></lightning-badge>
+              </template>
+
+              <template lwc:if={editingReviewId}>
+                <template lwc:if={review.isEditing}>
+                  <lightning-textarea
+                    class="slds-m-top_small"
+                    label="Review"
+                    value={draftReviewText}
+                    onchange={handleReviewTextChange}
+                  ></lightning-textarea>
+                  <lightning-input
+                    type="number"
+                    class="slds-m-top_small"
+                    label="Score"
+                    min="0"
+                    max="5"
+                    step="1"
+                    value={draftScore}
+                    onchange={handleScoreChange}
+                  ></lightning-input>
+                  <div class="slds-m-top_small action-row">
+                    <lightning-button
+                      label="Cancel"
+                      onclick={handleCancel}
+                    ></lightning-button>
+                    <lightning-button
+                      variant="brand"
+                      label="Save"
+                      onclick={handleSave}
+                    ></lightning-button>
+                  </div>
+                </template>
+              </template>
+
+              <template lwc:if={review.isNotEditing}>
+                <p class="review-score slds-m-top_small">
+                  Score: {review.Score__c} / 5
+                </p>
+                <p class="review-text slds-m-top_small">
+                  {review.Review_Text__c}
+                </p>
+                <div class="action-row slds-m-top_small">
+                  <lightning-button
+                    label="Edit"
+                    data-id={review.Id}
+                    onclick={handleEdit}
+                  ></lightning-button>
+                  <lightning-button
+                    variant="destructive-text"
+                    label="Delete"
+                    data-id={review.Id}
+                    onclick={handleDelete}
+                  ></lightning-button>
+                </div>
+              </template>
+            </div>
+          </lightning-card>
+        </article>
+      </template>
+    </div>
+  </template>
+
+  <template lwc:else>
+    <p class="slds-text-color_weak">No reviews yet.</p>
+  </template>
+</template>

@@ -1,5 +1,5 @@
 import LightningModal from "lightning/modal";
-import submitReview from "@salesforce/apex/MovieReviewUser.submitReview";
+import submitReview from "@salesforce/apex/MovieReviewCrud.submitReview";
 import { api, track } from "lwc";
 import { ShowToastEvent } from "lightning/platformShowToastEvent";
 
