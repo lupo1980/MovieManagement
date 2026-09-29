@@ -28,6 +28,12 @@ It demonstrates how to:
 
 This makes it a practical reference for building modal-driven UX patterns in Salesforce LWC.
 
+## Screenshots
+
+| Movie search                                                 | New review and existing reviews                                                              | Review list                                                                |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| ![Movie search results](docs/images/MovieReviews-Search.png) | ![New review form and existing reviews in the movie modal](docs/images/MovieReviews-New.png) | ![Reviews with edit and delete actions](docs/images/MovieReviews-list.png) |
+
 ## Main components
 
 - `movieReviewUser` — search for movies and launch the review flow

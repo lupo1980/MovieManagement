@@ -1,6 +1,7 @@
 import LightningModal from "lightning/modal";
-import { api, track, wire } from "lwc";
+import { api, wire } from "lwc";
 import getReviews from "@salesforce/apex/MovieReviewCrud.getReviews";
+import submitReview from "@salesforce/apex/MovieReviewCrud.submitReview";
 import updateReview from "@salesforce/apex/MovieReviewCrud.updateReview";
 import deleteReview from "@salesforce/apex/MovieReviewCrud.deleteReview";
 import { ShowToastEvent } from "lightning/platformShowToastEvent";
@@ -10,13 +11,13 @@ export default class ModalUserReviewList extends LightningModal {
   @api movieId;
   @api movieName;
   @api nickname;
-  @track movieSelected;
   reviews = [];
   error;
   editingReviewId;
   draftReviewText = "";
   draftScore;
   wiredReviews;
+  showFormNewReview = false;
 
   @wire(getReviews, { movieId: "$movieId" })
   wiredReviewList(result) {
@@ -45,6 +46,41 @@ export default class ModalUserReviewList extends LightningModal {
     return Boolean(this.error);
   }
 
+  openFormNewReview() {
+    this.showFormNewReview = true;
+  }
+
+  async handleSubmitReview(event) {
+    try {
+      console.log(
+        `Submitting review for movie: ${this.movieName} and user: ${this.nickname}`
+      );
+      console.log("Payload data:", event.detail);
+      console.log(`Review text: ${event.reviewText}`);
+      console.log(`Score: ${event.score}`);
+      // Call the Apex method to submit the review
+      let reviewId = await submitReview({
+        movieId: this.movieId,
+        reviewText: event.detail.reviewText,
+        nickname: this.nickname,
+        score: event.detail.score
+      });
+      if (reviewId) {
+        this.showToast("Success", "Review inserted.", "success");
+        this.showFormNewReview = false;
+        await refreshApex(this.wiredReviews);
+      }
+    } catch (error) {
+      console.error("Error submitting review:", error);
+      const evt = new ShowToastEvent({
+        title: "Error",
+        message: `Failed to submit review: ${error.body?.message || error.message}`,
+        variant: "error"
+      });
+      this.dispatchEvent(evt);
+    }
+  }
+
   handleEdit(event) {
     const review = this.reviews.find(
       (item) => item.Id === event.currentTarget.dataset.id
@@ -64,6 +100,10 @@ export default class ModalUserReviewList extends LightningModal {
 
   handleScoreChange(event) {
     this.draftScore = Number(event.target.value);
+  }
+
+  handleClose() {
+    this.close();
   }
 
   async handleSave() {
